@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html>
+  <script src="https://d3js.org/d3.v3.min.js"></script>
+  <link rel= "stylesheet" href = "styles.css" type = "text/css">
+  <body>
+
+      <script>
+var source = {
+  name: 'sh3ll_ui',
+  children: [
+    {
+      name: '.git',
+      children: [
+        { name: 'HEAD', size: 21 },
+        { name: 'branches', children: [] },
+        { name: 'config', size: 257 },
+        { name: 'description', size: 73 },
+        {
+          name: 'hooks',
+          children: [
+            { name: 'applypatch-msg.sample', size: 478 },
+            { name: 'commit-msg.sample', size: 896 },
+            { name: 'fsmonitor-watchman.sample', size: 3327 },
+            { name: 'post-update.sample', size: 189 },
+            { name: 'pre-applypatch.sample', size: 424 },
+            { name: 'pre-commit.sample', size: 1638 },
+            { name: 'pre-push.sample', size: 1348 },
+            { name: 'pre-rebase.sample', size: 4898 },
+            { name: 'pre-receive.sample', size: 544 },
+            { name: 'prepare-commit-msg.sample', size: 1492 },
+            { name: 'update.sample', size: 3610 }
+          ]
+        },
+        { name: 'index', size: 289 },
+        { name: 'info', children: [ { name: 'exclude', size: 240 } ] },
+        {
+          name: 'logs',
+          children: [
+            { name: 'HEAD', size: 177 },
+            {
+              name: 'refs',
+              children: [
+                {
+                  name: 'heads',
+                  children: [ { name: 'main', size: 177 } ]
+                },
+                {
+                  name: 'remotes',
+                  children: [
+                    {
+                      name: 'origin',
+                      children: [ { name: 'HEAD', size: 177 } ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          name: 'objects',
+          children: [
+            { name: 'info', children: [] },
+            {
+              name: 'pack',
+              children: [
+                {
+                  name: 'pack-f4975c00771b5dbbd86574b0f83928fb25073fc1.idx',
+                  size: 1324
+                },
+                {
+                  name: 'pack-f4975c00771b5dbbd86574b0f83928fb25073fc1.pack',
+                  size: 3388
+                }
+              ]
+            }
+          ]
+        },
+        { name: 'packed-refs', size: 112 },
+        {
+          name: 'refs',
+          children: [
+            { name: 'heads', children: [ { name: 'main', size: 41 } ] },
+            {
+              name: 'remotes',
+              children: [
+                {
+                  name: 'origin',
+                  children: [ { name: 'HEAD', size: 30 } ]
+                }
+              ]
+            },
+            { name: 'tags', children: [] }
+          ]
+        }
+      ]
+    },
+    { name: 'build_struct.js', size: 811 },
+    { name: 'config.js', size: 0 },
+    { name: 'index.html', size: 798 },
+    {
+      name: 'node_modules',
+      children: [
+        {
+          name: 'fs',
+          children: [
+            { name: 'README.md', size: 328 },
+            { name: 'package.json', size: 1335 }
+          ]
+        }
+      ]
+    },
+    { name: 'package-lock.json', size: 255 },
+    { name: 'styles.css', size: 184 }
+  ]
+}
+var w = window.innerWidth,
+    h = window.innerHeight,
+    node,
+    link,
+    root;
+
+var force = d3.layout.force().on("tick", tick).charge(function (d) {
+    return d.children ? -100 : -20 * Math.sqrt(d.size);
+}).linkDistance(function (d) {
+    return 40;
+}).size([w - 100, h - 160]);
+
+var vis = d3.select("body").append("svg").attr("width", w).attr("height", h);
+
+root = source;
+root.fixed = true;
+root.x = w / 2;
+root.y = h / 2;
+update();
+
+function update() {
+    nodes = flatten(root);
+    links = d3.layout.tree().links(nodes);
+    updateLinks();
+    updateNodes();
+}
+
+function updateLinks() {
+
+    force.links(links).start();
+
+    link = vis.selectAll("line.link").data(links, function (d) {
+        return d.target.id;
+    });
+
+    // Enter any new links.
+    link.enter().insert("line", ".node")
+        .attr("class", "link")
+        .attr("x1", function (d) {
+        return d.source.x;
+    }).attr("y1", function (d) {
+        return d.source.y;
+    }).attr("x2", function (d) {
+        return d.target.x;
+    }).attr("y2", function (d) {
+        return d.target.y;
+    });
+
+    link.exit().remove();
+
+}
+
+function updateNodes() {
+
+    force.nodes(nodes).start();
+
+    node = vis.selectAll(".node").data(nodes, function (d) {
+        return d.id;
+    });
+
+    // Enter any new elements.
+    var container = node.enter().append("g").attr("class", "node")
+    .attr("transform", function (d) {
+        return "translate(" + d.x + "," + d.y + ")";
+    }).call(force.drag);
+    container.append("circle").attr("r", radius).style("fill", color).on("click", click);
+    container.append("text").style("text-anchor", "middle");
+
+    // update radius and text
+    node.selectAll("circle").transition().attr("r", radius).style("fill", color);
+    node.selectAll("text").text(function (d) {
+        return !d.children ? d.name : null;
+    });
+
+    node.exit().remove();
+}
+
+function tick() {
+    link.attr("x1", function (d) {
+        return d.source.x;
+    }).attr("y1", function (d) {
+        return d.source.y;
+    }).attr("x2", function (d) {
+        return d.target.x;
+    }).attr("y2", function (d) {
+        return d.target.y;
+    });
+
+    node.attr("transform", function (d) {
+        return "translate(" + d.x + "," + d.y + ")";
+    });
+}
+
+function radius(d) {
+    return d.children ? 8 : Math.max(15, Math.sqrt(d.size));
+}
+
+// Color leaf nodes orange, and packages white or blue.
+function color(d) {
+    return d._children ? "#ff6a6a" : d.children ? "#e6e6fa" : "#8f6f8f";
+}
+
+// Toggle children on click.
+function click(d) {
+    if (d.children) {
+        d._children = d.children;
+        d.children = null;
+    } else {
+        d.children = d._children;
+        d._children = null;
+    }
+    update();
+}
+
+// Returns a list of all nodes under the root.
+function flatten(root) {
+    var nodes = [],
+        i = 0;
+
+    function recurse(node) {
+        if (node.children) node.size = node.children.reduce(function (p, v) {
+            return p + recurse(v);
+        }, 0);
+        if (!node.id) node.id = ++i;
+        nodes.push(node);
+        return node.size;
+    }
+
+    root.size = recurse(root);
+    return nodes;
+}
+
+        </script>
+</body>
+</html>
